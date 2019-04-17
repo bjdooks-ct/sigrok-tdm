@@ -35,26 +35,15 @@ class Decoder(srd.Decoder):
      )
     optional_channels = ()
     options = (
-        {'id': 'bps', 'desc': 'Bits per sample', 'default':16 }, 
+        {'id': 'bps', 'desc': 'Bits per sample', 'default':16 },
+        {'id': 'channels', 'desc': 'Channels per frame', 'default':8 },
         {'id': 'edge', 'desc': 'Clock edge to sample on', 'default':'r', 'values': ('r', 'f') }
-    )
-    annotations = (
-        ('ch0', 'Data channel 0'),
-        ('ch1', 'Data channel 1'),
-        ('ch2', 'Data channel 2'),
-        ('ch3', 'Data channel 3'),
-        ('ch4', 'Data channel 4'),
-        ('ch5', 'Data channel 5'),
-        ('ch6', 'Data channel 6'),
-        ('ch7', 'Data channel 7'),
-        ('data', 'Data'),
-        ('warning', 'Warning'),
     )
 
     def __init__(self, **kwargs):
         # initialsation here
         self.samplerate = None
-        self.channels = 2
+        self.channels = 8
         self.channel = 0
         self.bitdepth = 16
         self.bitcount = 0
@@ -63,6 +52,7 @@ class Decoder(srd.Decoder):
         self.lastframe = 0
         self.data = 0
         self.ss_block = None
+        self.annotations = ( ('data', 'Data'), ('warning', 'Warning') )
 
     def metdatadata(self, key, value):
         if key == srd.SRC_CONF_SAMPLERATE:
@@ -72,6 +62,10 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.bitdepth = self.options['bps']
         self.edge = self.options['edge']
+
+        self.annotations = ( )
+        for ch in range (0, self.channels):
+            self.annotations += ( 'ch%d' % ch, 'Channel %d' % ch)
 
     def decode(self):
        while True:
@@ -106,8 +100,13 @@ class Decoder(srd.Decoder):
                    else:
                        v = '%08x' % self.data
 
+                    if self.channel < self.channels:
+                        ch = self.channel
+                    else:
+                        ch = 0
+
                    self.put(self.ss_block, self.samplenum, self.out_ann,
-                            [self.channel, ['%s: %s' % (c1, v),
+                            [ch, ['%s: %s' % (c1, v),
                                  '%s: %s' % (c2, v),
                                  '%s: %s' % (c3, v) ]])
                    self.data = 0
